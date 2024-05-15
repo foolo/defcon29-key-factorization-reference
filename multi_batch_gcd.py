@@ -18,11 +18,9 @@ def gcd_div(x: tuple[int, int]):
 
 def calculate_remainder_level(remainders: list[int], products: list[int]):
     with Pool(cpu_count()) as cpu_pool:
-        return cpu_pool.map(div_mod_sq, ((remainders[i//2], products[i]) for i in range(len(products))))
-
+        return cpu_pool.map(div_mod_sq, ((remainders[i // 2], products[i]) for i in range(len(products))))
 
 class ProductTree:
-
     def __init__(self, path: str):
         self.path = path
         self.tree = self.build_product_tree(self.load_modulus_file(path))
@@ -49,7 +47,7 @@ class ProductTree:
         to the output array
         """
         with Pool(cpu_count()) as cpu_pool:
-            next_level = cpu_pool.map(multiply_pair, zip(*[iter(products)]*2))
+            next_level = cpu_pool.map(multiply_pair, zip(*[iter(products)] * 2))
         if len(products) % 2 == 1:
             next_level.append(products[-1])
 
@@ -73,19 +71,15 @@ def calculate_factors(product: int, tree: ProductTree):
     with Pool(cpu_count()) as cpu_pool:
         return cpu_pool.map(gcd_div, zip(remainders, tree.leaves))
 
-
 if __name__ == '__main__':
 
     paths = sys.argv[1:]
     trees = [ProductTree(path) for path in tqdm(paths, f'building {len(paths)} product trees')]
 
-    for left_tree, right_tree in tqdm(permutations(trees, 2),
-        desc='calculating remainders', total=(len(paths)*(len(paths)-1))):
+    for left_tree, right_tree in tqdm(permutations(trees, 2), desc='calculating remainders', total=(len(paths) * (len(paths) - 1))):
         product = left_tree.product * right_tree.product
         for idx, p in enumerate(calculate_factors(product, right_tree)):
             if p > 1:
                 q, remainder = divmod(right_tree.leaves[idx], p)
                 if remainder == 0:
-                    print('%s:%d - %d bits - %x -> (%x * %x' % (
-                        right_tree.path, idx+1, ceil(log2(right_tree.leaves[idx])), right_tree.leaves[idx], p, q)
-                    )
+                    print('%s:%d - %d bits - %x -> (%x * %x' % (right_tree.path, idx + 1, ceil(log2(right_tree.leaves[idx])), right_tree.leaves[idx], p, q))
