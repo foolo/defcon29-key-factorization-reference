@@ -5,39 +5,31 @@ from itertools import permutations
 
 from tqdm import tqdm
 
-def multiply_pair(x):
+def multiply_pair(x: tuple[int, int]):
     return x[0] * x[1]
 
-def div_mod_sq(x):
+def div_mod_sq(x: tuple[int, int]):
     result = x[0] % (x[1]**2)
     return result
 
-def gcd_div(x):
+def gcd_div(x: tuple[int, int]):
     result = gcd(x[0] // x[1], x[1])
     return result
 
-def calculate_remainder_level(remainders, products):
+def calculate_remainder_level(remainders: list[int], products: list[int]):
     with Pool(cpu_count()) as cpu_pool:
         return cpu_pool.map(div_mod_sq, ((remainders[i//2], products[i]) for i in range(len(products))))
 
-def calculate_factors(product, tree):
-    remainders = [product]
-
-    for level in reversed(tree.tree[:-1]):
-        remainders = calculate_remainder_level(remainders, level)
-
-    with Pool(cpu_count()) as cpu_pool:
-        return cpu_pool.map(gcd_div, zip(remainders, tree.leaves))
 
 class ProductTree:
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = path
         self.tree = self.build_product_tree(self.load_modulus_file(path))
         self.product = self.tree[-1][0]
         self.leaves = self.tree[0]
 
-    def build_product_tree(self, levels):
+    def build_product_tree(self, levels: list[list[int]]) -> list[list[int]]:
         """
         recursively produces a product tree from an input
         array of arrays which should initially contain one element
@@ -50,7 +42,7 @@ class ProductTree:
         return self.build_product_tree(levels)
 
     @staticmethod
-    def calculate_product_tree_level(products):
+    def calculate_product_tree_level(products: list[int]):
         """ 
         returns an array representing the pairwise products of the input,
         if an array of an odd length is provided, the last item is appended
@@ -64,7 +56,7 @@ class ProductTree:
         return next_level
 
     @staticmethod
-    def load_modulus_file(path):
+    def load_modulus_file(path: str):
         """
         returns a nested list of integers (a tree with one level) 
         from moduli stored as one hex string per line
@@ -72,13 +64,22 @@ class ProductTree:
         with open(path) as fp:
             return [[int(modulus, 16) for modulus in fp]]
 
+def calculate_factors(product: int, tree: ProductTree):
+    remainders = [product]
+
+    for level in reversed(tree.tree[:-1]):
+        remainders = calculate_remainder_level(remainders, level)
+
+    with Pool(cpu_count()) as cpu_pool:
+        return cpu_pool.map(gcd_div, zip(remainders, tree.leaves))
+
 
 if __name__ == '__main__':
 
     paths = sys.argv[1:]
     trees = [ProductTree(path) for path in tqdm(paths, f'building {len(paths)} product trees')]
 
-    for left_tree, right_tree in tqdm(permutations(trees, 2), 
+    for left_tree, right_tree in tqdm(permutations(trees, 2),
         desc='calculating remainders', total=(len(paths)*(len(paths)-1))):
         product = left_tree.product * right_tree.product
         for idx, p in enumerate(calculate_factors(product, right_tree)):
